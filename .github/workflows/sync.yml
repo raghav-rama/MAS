@@ -1,0 +1,39 @@
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set Git identity
+        run: |
+          git config --global user.name "${GITHUB_ACTOR}"
+          git config --global user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: git remote add upstream https://github.com/massgravel/Microsoft-Activation-Scripts.git  # Replace <UPSTREAM_REPO_URL>
+
+      - name: Fetch upstream changes
+        run: git fetch upstream
+
+      - name: Check for updates
+        id: check_updates
+        run: |
+          if [[ $(git status -uno | wc -l) -gt 0 ]]; then
+            echo "::set-output name=has_updates::true"
+          else
+            echo "::set-output name=has_updates::false"
+          fi
+
+      - name: Merge upstream changes (if any)
+        if: steps.check_updates.outputs.has_updates == 'true'
+        run: |
+          git checkout master
+          git merge upstream/master
+          git push origin master
